@@ -1,36 +1,193 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BlogHub - Multi-tenant Blog Platform
+
+A modern, multi-tenant blog platform built with Next.js 15, Clerk authentication, and Drizzle ORM. Each organization gets its own dedicated blog space with custom subdomains.
+
+## Features
+
+- 🏢 **Multi-tenant Architecture**: Each organization has its own blog space
+- 🔐 **Authentication & Authorization**: Powered by Clerk
+- 📝 **Blog Creation & Management**: Intuitive editor for creating and managing posts
+- 🌐 **Custom Subdomains**: Each organization gets a unique subdomain (e.g., `org-name.localhost:3000`)
+- 📱 **Responsive Design**: Beautiful, modern UI that works on all devices
+- ⚡ **Fast Performance**: Built with Next.js 15 and optimized for speed
+- 🎨 **Modern UI**: Clean, professional design with smooth animations
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Authentication**: Clerk
+- **Database**: PostgreSQL with Drizzle ORM
+- **Styling**: Tailwind CSS
+- **UI Components**: Custom components with Radix UI primitives
+- **TypeScript**: Full type safety
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- pnpm (recommended) or npm
+- PostgreSQL database
+- Clerk account
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd my-app
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+pnpm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Fill in your environment variables:
+```env
+# Database
+DATABASE_URL="postgresql://username:password@localhost:5432/bloghub"
 
-## Learn More
+# Clerk
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
 
-To learn more about Next.js, take a look at the following resources:
+# For development subdomains
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. Set up the database:
+```bash
+# Push the schema to your database
+pnpm db:push
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# (Optional) Open Drizzle Studio to view/edit data
+pnpm db:studio
+```
 
-## Deploy on Vercel
+5. Run the development server:
+```bash
+pnpm dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+```
+my-app/
+├── app/
+│   ├── (root)/                 # Main app routes (authenticated)
+│   │   ├── layout.tsx         # Root layout with Clerk provider
+│   │   ├── page.tsx           # Home page with dashboard
+│   │   └── org/
+│   │       └── [slug]/
+│   │           ├── page.tsx   # Blog creation page
+│   │           ├── blogs/     # Blog listing page
+│   │           └── action.ts  # Server actions
+│   ├── (subdomain)/           # Public blog routes
+│   │   ├── layout.tsx         # Subdomain layout
+│   │   └── s/
+│   │       └── [subdomain]/
+│   │           └── page.tsx   # Public blog page
+│   ├── api/
+│   │   └── blogs/
+│   │       └── route.ts       # API for fetching blogs
+│   └── components/
+│       ├── nav.tsx            # Navigation component
+│       ├── dashboard.tsx      # Organization dashboard
+│       └── loading.tsx        # Loading component
+├── components/
+│   └── ui/                    # Reusable UI components
+├── db/
+│   ├── index.ts              # Database connection
+│   └── schema.ts             # Database schema
+└── lib/
+    └── utils.ts              # Utility functions
+```
+
+## Usage
+
+### For Organizations
+
+1. **Sign Up/In**: Use Clerk authentication to create an account
+2. **Create Organization**: Create an organization in Clerk
+3. **Create Blog Posts**: Navigate to your organization's blog creation page
+4. **Manage Posts**: View and manage all your organization's posts
+5. **Public Blog**: Your blog is automatically available at `your-org-slug.localhost:3000`
+
+### For Readers
+
+- Visit any organization's public blog at `org-slug.localhost:3000`
+- Read posts without authentication
+- Clean, responsive reading experience
+
+## Database Schema
+
+```sql
+CREATE TABLE blogs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(80) NOT NULL,
+  body TEXT NOT NULL,
+  org_id TEXT NOT NULL
+);
+```
+
+## Development
+
+### Available Scripts
+
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Run ESLint
+- `pnpm db:push` - Push schema changes to database
+- `pnpm db:studio` - Open Drizzle Studio
+- `pnpm db:generate` - Generate migrations
+
+### Adding New Features
+
+1. **New Pages**: Add routes in the `app/` directory
+2. **Database Changes**: Modify `db/schema.ts` and run `pnpm db:push`
+3. **API Endpoints**: Add routes in `app/api/`
+4. **Components**: Create reusable components in `app/components/`
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Connect your repository to Vercel
+2. Set up environment variables in Vercel dashboard
+3. Deploy automatically on push to main branch
+
+### Other Platforms
+
+The app can be deployed to any platform that supports Next.js:
+- Netlify
+- Railway
+- DigitalOcean App Platform
+- AWS Amplify
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Support
+
+For support, please open an issue in the GitHub repository or contact the development team.
