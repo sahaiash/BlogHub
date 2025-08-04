@@ -60,7 +60,7 @@ export default function OrgLandingPage() {
                         Create New Blog Post
                     </h1>
                     <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                        Share your thoughts and insights with your organization. Your blog will be published to your organization's public page.
+                        Share your thoughts and insights with your organization. Your blog will be published to your organization&apos;s public page.
                     </p>
                 </div>
 
@@ -160,7 +160,7 @@ export default function OrgLandingPage() {
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Your Public Blog</h3>
                             <p className="text-gray-600 mb-4">
-                                Your organization's public blog is available at:
+                                Your organization&apos;s public blog is available at:
                             </p>
                             <a 
                                 href={`https://${selectedOrg.organization.slug}.localhost:3000`}
@@ -178,7 +178,7 @@ export default function OrgLandingPage() {
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Your Posts</h3>
                             <p className="text-gray-600 mb-4">
-                                View and manage all your organization's blog posts:
+                                View and manage all your organization&apos;s blog posts:
                             </p>
                             <Link 
                                 href={`/org/${selectedOrg.organization.slug}/blogs`}

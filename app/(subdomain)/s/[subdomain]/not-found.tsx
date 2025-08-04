@@ -9,7 +9,7 @@ export default function NotFound() {
         </div>
         <h1 className="text-4xl font-bold text-gray-900 mb-4">Blog Not Found</h1>
         <p className="text-lg text-gray-600 mb-8">
-          The organization blog you're looking for doesn't exist or may have been moved.
+          The organization blog you&apos;re looking for doesn&apos;t exist or may have been moved.
         </p>
         <div className="space-y-4">
           <p className="text-sm text-gray-500">

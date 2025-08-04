@@ -64,7 +64,7 @@ export default function BlogsPage() {
               {organization?.name} Blog Posts
             </h1>
             <p className="text-gray-600">
-              Manage and view all your organization's blog posts
+              Manage and view all your organization&apos;s blog posts
             </p>
           </div>
           <Link href={`/org/${organization?.slug}`}>
