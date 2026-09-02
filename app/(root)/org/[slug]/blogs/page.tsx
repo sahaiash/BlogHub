@@ -2,43 +2,62 @@
 import Nav from "@/app/components/nav";
 import { Button } from "@/components/ui/button";
 import { useOrganization } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { fetchOrgBlogs, type BlogView } from "@/lib/api/blogs";
+import { deleteBlog } from "../action";
 
-interface Blog {
-  id: string;
-  title: string;
-  body: string;
-  orgId: string;
-}
+const PAGE_SIZE = 9;
 
 export default function BlogsPage() {
   const { organization } = useOrganization();
-  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const slug = organization?.slug;
+
+  const [blogs, setBlogs] = useState<BlogView[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const load = useCallback(async (targetPage: number) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const data = await fetchOrgBlogs({ page: targetPage, limit: PAGE_SIZE });
+      setBlogs(data.items);
+      setPage(data.page);
+      setTotalPages(data.totalPages);
+      setTotal(data.total);
+    } catch (err) {
+      setError('Failed to load blogs');
+      console.error('Error fetching blogs:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchBlogs = async () => {
-      if (!organization?.id) return;
-      
-      try {
-        const response = await fetch(`/api/blogs?orgId=${organization.id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch blogs');
-        }
-        const data = await response.json();
-        setBlogs(data);
-      } catch (err) {
-        setError('Failed to load blogs');
-        console.error('Error fetching blogs:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!organization?.id) return;
+    load(1);
+  }, [organization?.id, load]);
 
-    fetchBlogs();
-  }, [organization?.id]);
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    setDeletingId(id);
+    try {
+      await deleteBlog({ id });
+      // If we just removed the last item on a page beyond the first, step back.
+      const nextPage = blogs.length === 1 && page > 1 ? page - 1 : page;
+      await load(nextPage);
+    } catch (err) {
+      setError('Failed to delete post');
+      console.error('Error deleting blog:', err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -56,7 +75,7 @@ export default function BlogsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       <Nav />
-      
+
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -64,10 +83,10 @@ export default function BlogsPage() {
               {organization?.name} Blog Posts
             </h1>
             <p className="text-gray-600">
-              Manage and view all your organization&apos;s blog posts
+              {total} {total === 1 ? 'post' : 'posts'} · manage and edit your content
             </p>
           </div>
-          <Link href={`/org/${organization?.slug}`}>
+          <Link href={`/org/${slug}`}>
             <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -100,7 +119,7 @@ export default function BlogsPage() {
               <p className="text-gray-600 mb-6">
                 Start creating content for your organization by writing your first blog post.
               </p>
-              <Link href={`/org/${organization?.slug}`}>
+              <Link href={`/org/${slug}`}>
                 <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                   Create Your First Post
                 </Button>
@@ -108,32 +127,63 @@ export default function BlogsPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {blogs.map((blog) => (
-              <article key={blog.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300">
-                <div className="p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
-                    {blog.title}
-                  </h2>
-                  <p className="text-gray-600 text-sm line-clamp-3 mb-4">
-                    {blog.body}
-                  </p>
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <span>Published</span>
-                    <div className="flex items-center space-x-2">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      <span>View</span>
+          <>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {blogs.map((blog) => (
+                <article key={blog.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col">
+                  <div className="p-6 flex flex-col flex-1">
+                    <h2 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+                      {blog.title}
+                    </h2>
+                    <p className="text-gray-600 text-sm line-clamp-3 mb-4 flex-1">
+                      {blog.body}
+                    </p>
+                    <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-100">
+                      <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
+                      <div className="flex items-center space-x-2">
+                        <Link href={`/org/${slug}/blogs/${blog.id}/edit`}>
+                          <Button size="sm" variant="outline">Edit</Button>
+                        </Link>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          disabled={deletingId === blog.id}
+                          onClick={() => handleDelete(blog.id)}
+                        >
+                          {deletingId === blog.id ? 'Deleting…' : 'Delete'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-10">
+                <Button
+                  variant="outline"
+                  disabled={page <= 1}
+                  onClick={() => load(page - 1)}
+                >
+                  ← Previous
+                </Button>
+                <span className="text-sm text-gray-600">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  disabled={page >= totalPages}
+                  onClick={() => load(page + 1)}
+                >
+                  Next →
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>
   );
-} 
+}

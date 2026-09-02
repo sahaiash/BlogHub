@@ -1,16 +1,10 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';     
 
 export const protocol =
   process.env.NODE_ENV === 'production' ? 'https' : 'http';
 export const rootDomain =
   process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000';
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 function extractSubdomain(request: NextRequest): string | null {
   const url = request.url;
@@ -54,7 +48,12 @@ export default clerkMiddleware((auth,request)=>{
   const { pathname } = request.nextUrl;
   const subdomain = extractSubdomain(request);
   if (subdomain) {
-    return NextResponse.rewrite(new URL(`/s/${subdomain}`, request.url));
+    // Preserve the path so subdomain sub-routes work, e.g.
+    //   acme.localhost/           -> /s/acme
+    //   acme.localhost/<postId>   -> /s/acme/<postId>
+    const url = request.nextUrl.clone();
+    url.pathname = `/s/${subdomain}${pathname === '/' ? '' : pathname}`;
+    return NextResponse.rewrite(url);
   }
 });
 

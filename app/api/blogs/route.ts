@@ -1,27 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/db';
-import { blogTable } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { auth } from '@clerk/nextjs/server';
+import { countBlogsByOrg, getBlogsByOrg } from '@/db/queries/blogs';
+import { parsePagination, totalPages } from '@/lib/pagination';
+
+const DEFAULT_LIMIT = 9;
+const MAX_LIMIT = 50;
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
+    // Tenant is derived from the authenticated Clerk session — never from the
+    // client. `orgId` is the caller's *active* organization and cannot be forged.
+    const { userId, orgId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     if (!orgId) {
       return NextResponse.json(
-        { error: 'Organization ID is required' },
-        { status: 400 }
+        { error: 'No active organization selected' },
+        { status: 403 }
       );
     }
 
-    const blogs = await db
-      .select()
-      .from(blogTable)
-      .where(eq(blogTable.orgId, orgId))
-      .orderBy(blogTable.id);
+    const { searchParams } = new URL(request.url);
+    const { page, limit, offset } = parsePagination(
+      { page: searchParams.get('page'), limit: searchParams.get('limit') },
+      { defaultLimit: DEFAULT_LIMIT, maxLimit: MAX_LIMIT }
+    );
 
-    return NextResponse.json(blogs);
+    const [items, total] = await Promise.all([
+      getBlogsByOrg(orgId, { limit, offset }),
+      countBlogsByOrg(orgId),
+    ]);
+
+    return NextResponse.json({
+      items,
+      total,
+      page,
+      limit,
+      totalPages: totalPages(total, limit),
+    });
   } catch (error) {
     console.error('Error fetching blogs:', error);
     return NextResponse.json(
@@ -29,4 +48,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

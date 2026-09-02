@@ -3,17 +3,12 @@ import { useOrganization } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
-interface Blog {
-  id: string;
-  title: string;
-  body: string;
-  orgId: string;
-}
+import { fetchOrgBlogs, type BlogView } from "@/lib/api/blogs";
 
 export default function Dashboard() {
   const { organization } = useOrganization();
-  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [blogs, setBlogs] = useState<BlogView[]>([]);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -22,13 +17,11 @@ export default function Dashboard() {
         setIsLoading(false);
         return;
       }
-      
+
       try {
-        const response = await fetch(`/api/blogs?orgId=${organization.id}`);
-        if (response.ok) {
-          const data = await response.json();
-          setBlogs(data);
-        }
+        const data = await fetchOrgBlogs({ limit: 3 });
+        setBlogs(data.items);
+        setTotal(data.total);
       } catch (error) {
         console.error('Error fetching blogs:', error);
       } finally {
@@ -74,7 +67,7 @@ export default function Dashboard() {
             <div>
               <p className="text-sm font-medium text-blue-600">Total Posts</p>
               <p className="text-2xl font-bold text-blue-900">
-                {isLoading ? "..." : blogs.length}
+                {isLoading ? "..." : total}
               </p>
             </div>
           </div>
@@ -123,7 +116,7 @@ export default function Dashboard() {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Posts</h3>
           <div className="space-y-3">
-            {blogs.slice(0, 3).map((blog) => (
+            {blogs.map((blog) => (
               <div key={blog.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex-1">
                   <h4 className="font-medium text-gray-900 line-clamp-1">{blog.title}</h4>

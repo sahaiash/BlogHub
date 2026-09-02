@@ -31,9 +31,8 @@ export default function OrgLandingPage() {
         
         try {
             await createBlog({
-                body: blogContent.trim(),
-                orgId: selectedOrg.organization?.id,
                 title: blogTitle.trim(),
+                body: blogContent.trim(),
             });
             setIsSuccess(true);
             // Reset form after successful creation
